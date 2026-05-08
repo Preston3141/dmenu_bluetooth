@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+return_code=0
+main()
+{
+    local menu_selection
+    menu_selection=$(printf "connect\ndisconnect\nscan\nremove" | dmenu )
+    quit_on_escape $menu_selection
+    $menu_selection
+}
+quit_on_escape()
+{
+    if [[ -z "$1" ]]; then
+        return_code=1
+        clean_up
+    fi
+}
+clean_up()
+{
+    echo "done :)"
+    exit $return_code
+}
+connect()
+{
+    trusted_device=$( bluetoothctl devices Trusted | dmenu | grep --color=never -Eo '(([0-9A-Z][0-9A-Z](|:)){6})')
+    quit_on_escape $trusted_device
+    bluetoothctl connect "$trusted_device"
+    return_code=$?
+}
+disconnect()
+{
+    trusted_device=$( bluetoothctl devices Connected | dmenu | grep --color=never -Eo '(([0-9A-Z][0-9A-Z](|:)){6})')
+    quit_on_escape $trusted_device
+    bluetoothctl disconnect $trusted_device
+    return_code=$?
+}
+scan()
+{
+    echo "ok" | dmenu -p "Hit enter to continue to scan for devices"
+    device="rescan"
+    while [[ $device == "rescan" ]]; do
+        device=$(echo -e "exit\nrescan\n$(bluetoothctl --timeout 10 scan on)" | egrep '[CHG]|[NEW]|exit|rescan' | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g" | dmenu -l 5 | grep --color=never -Eo '(([0-9A-Z][0-9A-Z](|:)){6})|exit|rescan')
+        echo $device
+    done
+    if [[ $device != "exit" ]]; then
+        bluetoothctl trust $device
+    fi
+}
+remove()
+{
+    device=$(bluetoothctl devices Paired | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g" | dmenu | grep --color=never -Eo '(([0-9A-Z][0-9A-Z](|:)){6})')
+    quit_on_escape $device
+    bluetoothctl remove $device
+    return_code=$?
+}
+pair()
+{
+    return 0
+}
+#main menu
+main
+clean_up
+
+
