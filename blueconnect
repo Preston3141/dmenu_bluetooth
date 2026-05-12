@@ -42,6 +42,7 @@ scan()
         echo $device
     done
     if [[ $device != "exit" ]]; then
+        bluetoothctl connect $device
         bluetoothctl trust $device
     fi
 }
